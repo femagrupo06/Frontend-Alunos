@@ -10,7 +10,6 @@ import {
 } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { HeaderComponent } from '../../shared/header/header';
-import { ModalComponent } from '../../shared/modal/modal';
 import { AtividadeService } from '../../services/atividade.service';
 import { RegistroForm } from '../../models/registro-form';
 
@@ -43,9 +42,9 @@ export class ProfessorComponent implements OnInit {
 
   ngOnInit(): void {
     this.atividadeForm = this.fb.group({
-      descricaoAtividade: ['', Validators.required],
-      quantidadeTotalGrupos: [null, [Validators.required, Validators.min(1)]],
-      quantidadeTotalAlunosSala: [null, [Validators.required, Validators.min(1)]],
+      descricaoAtividade: ['', [Validators.required, Validators.maxLength(100)]],
+      quantidadeTotalGrupos: [null, [Validators.required, Validators.min(2)]],
+      quantidadeTotalAlunosSala: [null, [Validators.required, Validators.min(2)]],
       grupoForm: this.fb.array([]),
     });
 
@@ -56,28 +55,52 @@ export class ProfessorComponent implements OnInit {
     return this.atividadeForm.get('grupoForm') as FormArray;
   }
 
+  bloquearCaracteresInvalidos(event: KeyboardEvent): void {
+  const teclasPermitidas = ['Backspace', 'Tab', 'Enter', 'Delete', 'ArrowLeft', 'ArrowRight'];
+  
+  if (teclasPermitidas.includes(event.key)) {
+    return;
+  }
+
+  if (!/^[0-9]$/.test(event.key)) {
+    event.preventDefault();
+  }
+}
+
   atualizarGrupos(): void {
-    const quantidade = this.atividadeForm.get('quantidadeTotalGrupos')?.value || 0;
+    const totalAlunos = this.atividadeForm.get('quantidadeTotalAlunosSala')?.value || 0;
+    let totalGrupos = this.atividadeForm.get('quantidadeTotalGrupos')?.value || 0;
+
+    if (totalAlunos > 0 && totalGrupos >= totalAlunos) {
+      totalGrupos = totalAlunos - 1;
+      totalGrupos = totalGrupos < 1 ? 1 : totalGrupos; 
+      
+      this.atividadeForm.get('quantidadeTotalGrupos')?.setValue(totalGrupos, { emitEvent: false });
+    }
 
     this.grupoForm.clear();
 
-    for (let i = 0; i < quantidade; i++) {
+    for (let i = 0; i < totalGrupos; i++) {
       this.grupoForm.push(
         this.fb.group({
           nomeGrupo: ['', Validators.required],
-          atividade: this.atividadeForm.get('descricaoAtividade') as FormArray,
+          atividade: [''], 
           quantidadeMaximaAluno: [0],
         }),
       );
     }
 
-    this.calcularDistribuicao();
-    this.calcularDistribuicao2();
+    if (totalGrupos > 0) {
+      this.calcularDistribuicao();
+      this.calcularDistribuicao2();
+    } else {
+      this.mostrarCalculo = false;
+      this.distribuicao = [];
+    }
   }
 
   calcularDistribuicao(): void {
     const totalAlunos = this.atividadeForm.get('quantidadeTotalAlunosSala')?.value || 0;
-
     const totalGrupos = this.atividadeForm.get('quantidadeTotalGrupos')?.value || 1;
 
     const base = Math.floor(totalAlunos / totalGrupos);
@@ -87,48 +110,15 @@ export class ProfessorComponent implements OnInit {
       const quantidadeCalculada = base + (index < resto ? 1 : 0);
 
       grupo.patchValue({
-        quantidadeAlunos: quantidadeCalculada,
+        atividade: this.atividadeForm.get('descricaoAtividade')?.value, 
         quantidadeMaximaAluno: quantidadeCalculada,
-      });
+      }, { emitEvent: false }); 
     });
-  }
-
-  criarSessao(): void {
-    if (this.atividadeForm.invalid) {
-      this.atividadeForm.markAllAsTouched();
-      return;
-    }
-
-    const payload: RegistroForm = {
-      descricaoAtividade: this.atividadeForm.value.descricaoAtividade,
-
-      quantidadeTotalAlunosSala: this.atividadeForm.value.quantidadeTotalAlunosSala,
-
-      grupoForm: this.grupoForm.value,
-    };
-
-    this.mostrarToast = true;
-
-    this.atividadeService.criarAtividade(payload).subscribe({
-      next: () => {
-        setTimeout(() => {
-          this.router.navigate(['professor/atividades']);
-        }, 1500);
-      },
-      error: (err) => {
-        console.error('Erro ao criar atividade', err);
-      },
-    });
-  }
-
-  get baseAlunos(): string {
-    return ((this.totalAlunos || 0) / this.groupCount).toFixed(2);
   }
 
   calcularDistribuicao2(): void {
     const totalAlunos = this.atividadeForm.get('quantidadeTotalAlunosSala')?.value;
-
-    const totalGrupos = this.atividadeForm.get('quantidadeTotalGrupos')?.value || 1;
+    const totalGrupos = this.atividadeForm.get('quantidadeTotalGrupos')?.value || 2;
 
     if (!totalAlunos || totalAlunos < 1) {
       this.mostrarCalculo = false;
@@ -146,5 +136,36 @@ export class ProfessorComponent implements OnInit {
     this.groupCount = totalGrupos;
     this.totalAlunos = totalAlunos;
     this.mostrarCalculo = true;
+  }
+
+  get baseAlunos(): string {
+    return ((this.totalAlunos || 0) / this.groupCount).toFixed(2);
+  }
+
+  criarSessao(): void {
+    if (this.atividadeForm.invalid) {
+      this.atividadeForm.markAllAsTouched();
+      return;
+    }
+
+    const payload: RegistroForm = {
+      descricaoAtividade: this.atividadeForm.value.descricaoAtividade,
+      quantidadeTotalAlunosSala: this.atividadeForm.value.quantidadeTotalAlunosSala,
+      grupoForm: this.grupoForm.value,
+    };
+
+    this.mostrarToast = true;
+
+    this.atividadeService.criarAtividade(payload).subscribe({
+      next: () => {
+        setTimeout(() => {
+          this.router.navigate(['/professor/atividades']);
+        }, 1500);
+      },
+      error: (err) => {
+        console.error('Erro ao criar atividade', err);
+        this.mostrarToast = false; 
+      },
+    });
   }
 }
