@@ -5,6 +5,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { APP_INITIALIZER } from '@angular/core';
 import { ConfigService } from './app/services/config.service';
 
+
+
 export function initializeApp(config: ConfigService) {
   return () => config.loadConfig();
 }

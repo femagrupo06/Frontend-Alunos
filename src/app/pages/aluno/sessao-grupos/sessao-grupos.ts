@@ -32,7 +32,7 @@ export class SessaoGruposComponent implements OnInit {
     private router: Router,
     private grupoService: GrupoService,
     private cdr: ChangeDetectorRef,
-  ) {}
+  ) { }
 
   ngOnInit() {
     const usuarioSalvo = localStorage.getItem('usuario');
@@ -97,16 +97,13 @@ export class SessaoGruposComponent implements OnInit {
       next: () => {
         this.ModalSucesso = true;
 
-        this.cdr.detectChanges();
-
         setTimeout(() => {
           window.location.reload();
         }, 2500);
       },
-      error: () => {
+      error: (err) => {
+        console.error('Erro ao entrar no grupo:', err);
         this.ModalErro = true;
-
-        this.cdr.detectChanges();
 
         setTimeout(() => {
           window.location.reload();
