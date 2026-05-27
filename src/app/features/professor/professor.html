@@ -6,38 +6,46 @@
     <div class="row justify-content-center mb-5">
       <div class="col-lg-10 col-md-8">
         <div class="card shadow-sm border-2">
-          <div class="card-body p-2">
-            <h3 class="fw-bold mb-3">Criar Nova Atividade</h3>
+          <div class="card-body p-4"> <h3 class="fw-bold mb-3">Criar Nova Atividade</h3>
 
             <form [formGroup]="atividadeForm" (ngSubmit)="criarSessao()">
 
-              <div class="mb-2">
+              <div class="mb-3">
                 <label class="form-label">
                   Descrição da Atividade
                   <span class="text-danger">*</span>
                 </label>
 
                 <input type="text" class="form-control" formControlName="descricaoAtividade"
-                  placeholder="Ex: Atividade TAT" />
+                  placeholder="Ex: Atividade TAT" maxlength="100" />
+
+                <div class="d-flex justify-content-between small mt-1">
+                  <span class="text-danger fw-bold"
+                    *ngIf="atividadeForm.get('descricaoAtividade')?.value?.length === 100">
+                    ⚠️ Limite máximo de 100 caracteres atingido!
+                  </span>
+                  <span *ngIf="atividadeForm.get('descricaoAtividade')?.value?.length !== 100"></span>
+
+                  <span
+                    [ngClass]="{'text-danger fw-bold': atividadeForm.get('descricaoAtividade')?.value?.length === 100, 'text-muted': atividadeForm.get('descricaoAtividade')?.value?.length !== 100}">
+                    {{ atividadeForm.get('descricaoAtividade')?.value?.length || 0 }}/100
+                  </span>
+                </div>
               </div>
 
-              <div class="mb-2">
-                <label class="form-label">
-                  Quantidade de Alunos na Sala
-                </label>
-
-                <input type="number" class="form-control" formControlName="quantidadeTotalAlunosSala" min="1"
-                  (change)="calcularDistribuicao()" />
+              <div class="mb-3">
+                <label class="form-label">Quantidade de Alunos na Sala</label>
+                <input type="number" class="form-control" formControlName="quantidadeTotalAlunosSala" min="2" step="1"
+                  (keydown)="bloquearCaracteresInvalidos($event)" (change)="atualizarGrupos()" />
               </div>
 
-              <div class="mb-2">
+              <div class="mb-3">
                 <label class="form-label">Quantidade de Grupos</label>
-
-                <input type="number" class="form-control" formControlName="quantidadeTotalGrupos" min="1"
-                  (change)="atualizarGrupos()" />
+                <input type="number" class="form-control" formControlName="quantidadeTotalGrupos" min="2" step="1"
+                  (keydown)="bloquearCaracteresInvalidos($event)" (change)="atualizarGrupos()" />
               </div>
 
-              <div class="calculo-card mt-3 fade-slide" *ngIf="mostrarCalculo">
+              <div class="calculo-card mt-3 mb-3" *ngIf="mostrarCalculo">
                 <p class="mb-1 text-muted">
                   {{ totalAlunos }} alunos ÷ {{ groupCount }} grupos =
                   <strong>{{ baseAlunos }}</strong>
@@ -51,7 +59,6 @@
               </div>
 
               <div class="nome-grupos mt-3" formArrayName="grupoForm">
-
                 <label class="form-label">
                   Nomes dos Grupos
                   <span class="text-danger">*</span>
@@ -61,10 +68,9 @@
                   <input type="text" class="form-control mb-2" formControlName="nomeGrupo"
                     [placeholder]="'Grupo ' + (i + 1)" />
                 </div>
-
               </div>
 
-              <button class="btn btn-primary w-100 mt-3" type="submit" [disabled]="atividadeForm.invalid">
+              <button class="btn btn-primary w-100 mt-4" type="submit" [disabled]="atividadeForm.invalid">
                 Agrupar
               </button>
 
@@ -74,16 +80,13 @@
       </div>
     </div>
 
-    <!-- Toast -->
     <div class="toast-container position-fixed top-0 end-0 p-3">
       <div class="toast align-items-center text-bg-success border-0" [class.show]="mostrarToast" role="alert">
-
         <div class="d-flex">
           <div class="toast-body">
             <strong>Atividade criada!</strong><br />
             Redirecionando para os grupos...
           </div>
-
           <button type="button" class="btn-close btn-close-white me-2 m-auto" (click)="mostrarToast = false">
           </button>
         </div>
